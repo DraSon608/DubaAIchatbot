@@ -37,6 +37,7 @@ interface ChatInputProps {
   language: 'en' | 'dz';
   onOpenAutomation?: () => void;
   onOpenSandbox?: () => void;
+  onToggleForceOffline?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -54,6 +55,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   language,
   onOpenAutomation,
   onOpenSandbox,
+  onToggleForceOffline,
 }) => {
   const [input, setInput] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -265,8 +267,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             className="flex-1 max-h-[200px] resize-none bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-400 outline-none leading-relaxed"
           />
 
-          {/* Right Action Icons: Microphone + Send/Stop Button */}
+          {/* Right Action Icons: Mode Toggle + Microphone + Send/Stop Button */}
           <div className="flex items-center gap-1.5 mb-1 shrink-0">
+            {/* Quick Online / Offline Mode Badge */}
+            {onToggleForceOffline && (
+              <button
+                type="button"
+                onClick={onToggleForceOffline}
+                title={
+                  isOnline && !forceOffline
+                    ? 'Connected to Online Cloud Turbo. Click to test Offline Core.'
+                    : 'In Offline Core. Click to auto-connect to Online Cloud Mode.'
+                }
+                className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono border transition ${
+                  isOnline && !forceOffline
+                    ? 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-950/60'
+                    : 'border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-950/60'
+                }`}
+              >
+                {isOnline && !forceOffline ? (
+                  <>
+                    <Cloud className="h-2.5 w-2.5 text-emerald-400" />
+                    <span>Cloud</span>
+                  </>
+                ) : (
+                  <>
+                    <Cpu className="h-2.5 w-2.5 text-amber-400" />
+                    <span>Offline</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Voice Dictation */}
             {recognitionSupported && (
               <button

@@ -9,13 +9,13 @@ import {
   Cloud,
   Check,
   Share2,
-  FileDown,
-  Globe,
   Radio,
   Wifi,
   WifiOff,
   Flame,
   Code2,
+  RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { ModelMode, NetworkConnectionType } from '../types/chat';
 import { translations } from '../services/translations';
@@ -34,6 +34,10 @@ interface TopBarProps {
   connectionLabel?: string;
   forceOffline: boolean;
   onToggleForceOffline: () => void;
+  autoInterpretOnline: boolean;
+  onToggleAutoInterpret: () => void;
+  onRefreshConnectivity?: () => void;
+  isRefreshingPing?: boolean;
   onNewChat: () => void;
   onOpenSandbox: () => void;
   onOpenAutomation: () => void;
@@ -56,6 +60,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   pingMs,
   forceOffline,
   onToggleForceOffline,
+  autoInterpretOnline,
+  onToggleAutoInterpret,
+  onRefreshConnectivity,
+  isRefreshingPing = false,
   onNewChat,
   onOpenSandbox,
   onOpenAutomation,
@@ -66,25 +74,37 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleTemporaryChat,
 }) => {
   const [showModelMenu, setShowModelMenu] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showNetworkMenu, setShowNetworkMenu] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const networkDropdownRef = useRef<HTMLDivElement>(null);
   const t = translations[language];
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        modelDropdownRef.current &&
+        !modelDropdownRef.current.contains(e.target as Node)
+      ) {
         setShowModelMenu(false);
       }
+      if (
+        networkDropdownRef.current &&
+        !networkDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowNetworkMenu(false);
+      }
     };
-    if (showModelMenu) {
+
+    if (showModelMenu || showNetworkMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showModelMenu]);
+  }, [showModelMenu, showNetworkMenu]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-white/5 bg-[#212121]/90 px-3 sm:px-4 backdrop-blur-md">
-      {/* Left: Sidebar Toggle, New Chat, & ChatGPT Model Selector */}
+    <header className="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-white/5 bg-[#212121]/95 px-3 sm:px-4 backdrop-blur-md">
+      {/* Left: Sidebar Toggle, New Chat, Model Selector & Network Badge */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Sidebar Toggle Icon */}
         <button
@@ -99,7 +119,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           )}
         </button>
 
-        {/* New Chat Icon Button (visible when sidebar is closed or on mobile) */}
+        {/* New Chat Icon Button (visible when sidebar is closed) */}
         {!sidebarOpen && (
           <button
             onClick={onNewChat}
@@ -111,9 +131,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         )}
 
         {/* ChatGPT Style Model Selector Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={modelDropdownRef}>
           <button
-            onClick={() => setShowModelMenu((prev) => !prev)}
+            onClick={() => {
+              setShowModelMenu((prev) => !prev);
+              setShowNetworkMenu(false);
+            }}
             className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-slate-200 hover:bg-white/10 transition"
           >
             <span className="flex items-center gap-1.5">
@@ -178,7 +201,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     <span>Duba Auto-Pilot</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Automatically uses Cloud when online, falls back to Offline Core.
+                    Auto-connects to Online Cloud when available; falls back locally.
                   </p>
                 </div>
                 {modelMode === 'auto' && <Check className="h-4 w-4 text-cyan-400 shrink-0" />}
@@ -207,30 +230,149 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </div>
                 {modelMode === 'offline' && <Check className="h-4 w-4 text-indigo-400 shrink-0" />}
               </button>
+            </div>
+          )}
+        </div>
 
-              {/* Live Connection Telemetry Footer inside Model Menu */}
-              <div className="mt-1 pt-2 border-t border-white/5 px-2.5 pb-1 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Connection</span>
-                <span className="font-mono text-slate-300 flex items-center gap-1">
-                  {isOnline && !forceOffline ? (
-                    connectionType === 'cellular' ? (
-                      <>
-                        <Radio className="h-3 w-3 text-cyan-400 animate-pulse" />
-                        <span>Mobile ({effectiveType || '4G'})</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wifi className="h-3 w-3 text-emerald-400" />
-                        <span>Wi-Fi ({pingMs ? `${pingMs}ms` : 'online'})</span>
-                      </>
-                    )
-                  ) : (
-                    <>
-                      <WifiOff className="h-3 w-3 text-amber-400" />
-                      <span>Offline Core</span>
-                    </>
+        {/* Dedicated Interactive Network & Online Status Badge */}
+        <div className="relative" ref={networkDropdownRef}>
+          <button
+            onClick={() => {
+              setShowNetworkMenu((prev) => !prev);
+              setShowModelMenu(false);
+            }}
+            title="Manage Online & Network Connection"
+            className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-medium transition ${
+              isOnline && !forceOffline
+                ? connectionType === 'cellular'
+                  ? 'border-cyan-500/30 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-950/60'
+                  : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-950/60'
+                : 'border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-950/60'
+            }`}
+          >
+            {isOnline && !forceOffline ? (
+              connectionType === 'cellular' ? (
+                <>
+                  <Radio className="h-3 w-3 text-cyan-400 animate-pulse" />
+                  <span className="font-mono hidden sm:inline">
+                    Mobile ({effectiveType || '4G'})
+                  </span>
+                  <span className="font-mono sm:hidden">4G/5G</span>
+                  {pingMs !== null && (
+                    <span className="text-[10px] text-cyan-400/80 font-mono">
+                      {pingMs}ms
+                    </span>
                   )}
+                </>
+              ) : (
+                <>
+                  <Wifi className="h-3 w-3 text-emerald-400" />
+                  <span className="font-mono hidden sm:inline">Wi-Fi Online</span>
+                  <span className="font-mono sm:hidden">Wi-Fi</span>
+                  {pingMs !== null && (
+                    <span className="text-[10px] text-emerald-400/80 font-mono">
+                      {pingMs}ms
+                    </span>
+                  )}
+                </>
+              )
+            ) : (
+              <>
+                <WifiOff className="h-3 w-3 text-amber-400" />
+                <span className="font-mono">Offline Core</span>
+              </>
+            )}
+            <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
+          </button>
+
+          {/* Quick Network Manager Popover */}
+          {showNetworkMenu && (
+            <div className="absolute top-10 left-0 z-50 w-72 rounded-2xl border border-white/10 bg-[#212121] p-3 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/5">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-amber-400" />
+                  Online Connection Manager
                 </span>
+                {onRefreshConnectivity && (
+                  <button
+                    onClick={() => onRefreshConnectivity()}
+                    title="Test ping / reconnect"
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition p-1 rounded"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isRefreshingPing ? 'animate-spin text-amber-400' : ''}`} />
+                    <span>Ping</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Status details */}
+              <div className="rounded-xl bg-[#171717] p-2.5 mb-2.5 text-xs space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Medium:</span>
+                  <span className="text-white font-medium">
+                    {connectionType === 'cellular'
+                      ? `Mobile Data (${effectiveType ? effectiveType.toUpperCase() : '4G/5G'})`
+                      : connectionType === 'wifi'
+                      ? 'Wi-Fi Network'
+                      : 'Local Device'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Status:</span>
+                  <span className={isOnline && !forceOffline ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>
+                    {isOnline && !forceOffline ? 'Online (Gemini Cloud)' : 'Offline Core'}
+                  </span>
+                </div>
+                {pingMs !== null && (
+                  <div className="flex justify-between items-center font-mono text-[11px]">
+                    <span className="text-slate-400">Latency:</span>
+                    <span className="text-slate-200">{pingMs}ms</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Auto-Connect Toggle Switch */}
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5 mb-2.5">
+                <div className="space-y-0.5 max-w-[190px]">
+                  <div className="text-xs font-semibold text-white">
+                    Auto-Connect to Online
+                  </div>
+                  <div className="text-[10px] text-slate-400 leading-tight">
+                    Automatically connects to Cloud when Wi-Fi or mobile data is present.
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={autoInterpretOnline}
+                    onChange={onToggleAutoInterpret}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" />
+                </label>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => {
+                    if (forceOffline) onToggleForceOffline();
+                    onChangeModelMode('cloud');
+                    setShowNetworkMenu(false);
+                  }}
+                  className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30 text-[11px] font-semibold text-center transition"
+                >
+                  Force Online
+                </button>
+                <button
+                  onClick={() => {
+                    if (!forceOffline) onToggleForceOffline();
+                    setShowNetworkMenu(false);
+                  }}
+                  className="flex-1 py-1.5 px-2 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 text-[11px] font-medium text-center transition"
+                >
+                  Test Offline
+                </button>
               </div>
             </div>
           )}
@@ -238,12 +380,12 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Center: Conversation Title preview */}
-      <div className="hidden md:flex items-center gap-2 max-w-[280px] lg:max-w-[380px] truncate text-xs text-slate-400">
+      <div className="hidden md:flex items-center gap-2 max-w-[280px] lg:max-w-[340px] truncate text-xs text-slate-400">
         <span className="truncate">{title}</span>
       </div>
 
       {/* Right: Quick Action Controls */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 sm:gap-1.5">
         {/* Temporary Chat Toggle (ChatGPT style) */}
         {onToggleTemporaryChat && (
           <button

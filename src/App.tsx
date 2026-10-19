@@ -129,6 +129,8 @@ export default function App() {
     connectionType,
     effectiveType,
     connectionLabel,
+    refreshStatus,
+    isChecking,
   } = useOnlineStatus({
     forceOffline: settings.forceOffline,
     autoInterpretOnline: settings.autoInterpretOnline,
@@ -680,6 +682,15 @@ export default function App() {
           onToggleForceOffline={() =>
             handleSaveSettings({ ...settings, forceOffline: !settings.forceOffline })
           }
+          autoInterpretOnline={settings.autoInterpretOnline}
+          onToggleAutoInterpret={() =>
+            handleSaveSettings({
+              ...settings,
+              autoInterpretOnline: !settings.autoInterpretOnline,
+            })
+          }
+          onRefreshConnectivity={refreshStatus}
+          isRefreshingPing={isChecking}
           onNewChat={handleNewChat}
           onOpenSandbox={() => {
             setSandboxInitialCode('');
@@ -889,6 +900,9 @@ export default function App() {
             setSandboxInitialLang('javascript');
             setSandboxOpen(true);
           }}
+          onToggleForceOffline={() =>
+            handleSaveSettings({ ...settings, forceOffline: !settings.forceOffline })
+          }
         />
       </div>
 

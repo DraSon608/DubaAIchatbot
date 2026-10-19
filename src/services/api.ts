@@ -132,20 +132,28 @@ export class ApiService {
             continue;
           }
 
+          let data: any = null;
           try {
-            const data = JSON.parse(dataStr);
-            if (data.error) {
-              console.warn('[Duba Cloud] Stream error:', data.error);
-              throw new Error(data.error);
-            }
-            if (data.text) {
-              fullText += data.text;
-              onChunk(data.text);
-            }
-          } catch (parseErr) {
-            // Non-JSON SSE line or parse error
+            data = JSON.parse(dataStr);
+          } catch {
+            // Non-JSON SSE line
+            continue;
+          }
+
+          if (data?.error) {
+            console.warn('[Duba Cloud] Stream reported error:', data.error);
+            throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+          }
+
+          if (data?.text) {
+            fullText += data.text;
+            onChunk(data.text);
           }
         }
+      }
+
+      if (!fullText.trim()) {
+        throw new Error('No content received from cloud stream.');
       }
 
       onComplete(fullText, 'gemini-3.8-flash');

@@ -21,6 +21,7 @@ export function useOnlineStatus({
   const [connectionType, setConnectionType] = useState<NetworkConnectionType>('unknown');
   const [effectiveType, setEffectiveType] = useState<string | undefined>(undefined);
   const [downlinkMbps, setDownlinkMbps] = useState<number | undefined>(undefined);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
 
   const prevOnlineRef = useRef<boolean | null>(null);
 
@@ -81,6 +82,7 @@ export function useOnlineStatus({
   }, []);
 
   const checkConnectivity = useCallback(async () => {
+    setIsChecking(true);
     const medium = inspectNetworkMedium();
     setConnectionType(medium.type);
     setEffectiveType(medium.effectiveType);
@@ -149,6 +151,8 @@ export function useOnlineStatus({
           lastChecked: Date.now(),
         });
       }
+    } finally {
+      setIsChecking(false);
     }
   }, [inspectNetworkMedium, forceOffline, autoInterpretOnline, onConnectionChange]);
 
@@ -266,5 +270,6 @@ export function useOnlineStatus({
     connectionLabel: getConnectionLabel(),
     getConnectionLabel,
     refreshStatus: checkConnectivity,
+    isChecking,
   };
 }

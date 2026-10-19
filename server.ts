@@ -65,51 +65,88 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       parts: [{ text: m.content || '' }],
     }));
 
+    // Natural, brilliant ChatGPT-like system instruction
     const defaultSystemInstruction =
       systemInstruction ||
-      `You are Duba, an advanced, friendly, and ultra-capable AI automation chatbot similar to ChatGPT.
-You possess deep and all up-to-date expertise in the automation history and civics of the Kingdom of Bhutan (including Gelephu Mindfulness City / GMC SAR Act 2024, National Digital Identity / NDI, DHI clean hydro Bitcoin mining and sovereign computing reserves, 13th Five Year Plan 2024–2029, the Constitution of 2008, Democratic Constitutional Monarchy, Parliament, Prime Minister Dasho Tshering Tobgay, and Gross National Happiness / GNH).
-You assist users with coding, automation, analysis, writing, problem-solving, and task execution in English and official Dzongkha (རྫོང་ཁ).
-You format responses with clear Markdown, code blocks with languages specified, tables, bullet points, and actionable next steps. Be concise, proactive, insightful, and precise. If code is requested, provide robust, clean code with explanations.`;
+      `You are Duba, a brilliant, thoughtful, and articulate AI modeled after ChatGPT.
+You converse naturally, intelligently, and helpfully on any topic — coding, writing, reasoning, math, science, philosophy, creative brainstorming, and everyday questions.
+Provide direct, beautifully formatted responses with clean Markdown, clear typography, and well-commented code snippets when appropriate.
+Adapt seamlessly to the user's tone and requirements, answering questions directly and insightfully without unnecessary preamble or rigid automation templates.
+If the user writes in English, respond in fluent English. If the user writes or asks in Dzongkha (རྫོང་ཁ), respond naturally in polite, grammatical Dzongkha.`;
 
     if (stream) {
-      // Server-Sent Events (SSE) streaming
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
+      // Server-Sent Events (SSE) streaming with anti-buffering headers for Cloud Run / Nginx
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
 
-      const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-3.8-flash',
-        contents,
-        config: {
-          systemInstruction: defaultSystemInstruction,
-          temperature: typeof temperature === 'number' ? temperature : 0.7,
-        },
-      });
+      // Multi-model resilience: Try primary fast flash model, then fallback
+      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+      let responseStream = null;
+      let usedModel = 'gemini-flash-latest';
+
+      for (const modelName of candidateModels) {
+        try {
+          responseStream = await ai.models.generateContentStream({
+            model: modelName,
+            contents,
+            config: {
+              systemInstruction: defaultSystemInstruction,
+              temperature: typeof temperature === 'number' ? temperature : 0.7,
+            },
+          });
+          usedModel = modelName;
+          break;
+        } catch (modelErr: any) {
+          console.warn(`[Duba Cloud] Model ${modelName} unavailable (${modelErr?.status || modelErr?.message?.slice(0, 40)}). Trying fallback...`);
+        }
+      }
+
+      if (!responseStream) {
+        throw new Error('All cloud AI models are momentarily busy. Switching to offline engine.');
+      }
 
       for await (const chunk of responseStream) {
         const text = chunk.text;
         if (text) {
           res.write(`data: ${JSON.stringify({ text })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
         }
       }
 
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents,
-        config: {
-          systemInstruction: defaultSystemInstruction,
-          temperature: typeof temperature === 'number' ? temperature : 0.7,
-        },
-      });
+      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash'];
+      let response = null;
+
+      for (const modelName of candidateModels) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config: {
+              systemInstruction: defaultSystemInstruction,
+              temperature: typeof temperature === 'number' ? temperature : 0.7,
+            },
+          });
+          break;
+        } catch (modelErr: any) {
+          console.warn(`[Duba Cloud] Non-stream model ${modelName} failed. Trying fallback...`);
+        }
+      }
+
+      if (!response) {
+        throw new Error('Cloud AI unavailable.');
+      }
 
       res.json({
         text: response.text || '',
-        model: 'gemini-3.8-flash',
+        model: 'gemini-flash-latest',
       });
     }
   } catch (error: any) {
