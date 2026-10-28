@@ -10,6 +10,7 @@ import {
   ThumbsDown,
   Cloud,
   Cpu,
+  Globe,
   CornerDownLeft,
 } from 'lucide-react';
 import { ChatMessage as ChatMessageType } from '../types/chat';

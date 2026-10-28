@@ -13,6 +13,7 @@ import {
   Compass,
   Cpu,
   Cloud,
+  Globe,
 } from 'lucide-react';
 import { translations } from '../services/translations';
 
@@ -276,8 +277,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onClick={onToggleForceOffline}
                 title={
                   isOnline && !forceOffline
-                    ? 'Connected to Online Cloud Turbo. Click to test Offline Core.'
-                    : 'In Offline Core. Click to auto-connect to Online Cloud Mode.'
+                    ? 'Connected to Online Mode. Click to test Offline Core.'
+                    : 'In Offline Core. Click to auto-connect to Online Mode.'
                 }
                 className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono border transition ${
                   isOnline && !forceOffline
@@ -287,8 +288,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               >
                 {isOnline && !forceOffline ? (
                   <>
-                    <Cloud className="h-2.5 w-2.5 text-emerald-400" />
-                    <span>Cloud</span>
+                    <Globe className="h-2.5 w-2.5 text-emerald-400" />
+                    <span>Online</span>
                   </>
                 ) : (
                   <>
@@ -348,7 +349,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <div className="mt-2 text-center text-[11px] text-slate-400">
         {language === 'dz'
           ? 'དུ་བ་གླེང་མོལ་རྩིས་འཕྲུལ་འདི་ དྲ་རྒྱ་ཡོད་མེད་གཉིས་ཆ་རར་ལཱ་འབད་ཚུགས། གལ་ཆེ་བའི་གནས་ཚུལ་ཚུ་བསྐྱར་ཞིབ་འབད་གནང་།'
-          : 'Duba can make mistakes. Check important info. Operates 100% on-device offline & cloud turbo.'}
+          : 'Duba can make mistakes. Check important info. Operates on-device offline & online with search grounding.'}
       </div>
     </div>
   );

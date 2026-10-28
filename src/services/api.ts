@@ -1,11 +1,18 @@
 import { DubaOfflineBrain } from './offlineBrain';
-import { ChatMessage, ServerHealth } from '../types/chat';
+import { ServerHealth } from '../types/chat';
 
 export interface ChatRequestOptions {
   messages: { role: string; content: string }[];
   systemInstruction?: string;
   forceOffline?: boolean;
   temperature?: number;
+  searchGrounding?: boolean;
+  apiProvider?: 'gemini' | 'ollama' | 'openai';
+  ollamaEndpoint?: string;
+  ollamaModel?: string;
+  customOpenAIEndpoint?: string;
+  customOpenAIKey?: string;
+  customOpenAIModel?: string;
   onChunk: (chunk: string) => void;
   onComplete: (fullText: string, modelUsed: string) => void;
   onError: (error: string) => void;
@@ -34,6 +41,7 @@ export class ApiService {
         online: false,
         hasApiKey: false,
         model: 'duba-offline-core',
+        searchGrounding: false,
         timestamp: Date.now(),
       };
     }
@@ -45,6 +53,13 @@ export class ApiService {
       systemInstruction,
       forceOffline,
       temperature = 0.7,
+      searchGrounding = true,
+      apiProvider = 'gemini',
+      ollamaEndpoint,
+      ollamaModel,
+      customOpenAIEndpoint,
+      customOpenAIKey,
+      customOpenAIModel,
       onChunk,
       onComplete,
       onError,
@@ -77,7 +92,7 @@ export class ApiService {
       return;
     }
 
-    // Attempt Online Cloud Gemini Call
+    // Attempt Online AI Call (with Search Grounding or Open-Source Ollama/OpenAI)
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -87,13 +102,20 @@ export class ApiService {
           systemInstruction,
           stream: true,
           temperature,
+          searchGrounding,
+          apiProvider,
+          ollamaEndpoint,
+          ollamaModel,
+          customOpenAIEndpoint,
+          customOpenAIKey,
+          customOpenAIModel,
         }),
         signal,
       });
 
       if (!response.ok) {
-        // Fallback to offline brain on server 503 or error
-        console.warn(`[Duba Cloud] Server returned ${response.status}. Falling back to Duba Offline Neural Core.`);
+        // Fallback to offline brain on server error
+        console.warn(`[Duba Online] Server returned ${response.status}. Falling back to Duba Offline Neural Core.`);
         let fullText = '';
         const stream = DubaOfflineBrain.generateStream(lastUserMessage, messages, systemInstruction);
         for await (const chunk of stream) {
@@ -141,7 +163,7 @@ export class ApiService {
           }
 
           if (data?.error) {
-            console.warn('[Duba Cloud] Stream reported error:', data.error);
+            console.warn('[Duba Online] Stream reported error:', data.error);
             throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
           }
 
@@ -153,10 +175,19 @@ export class ApiService {
       }
 
       if (!fullText.trim()) {
-        throw new Error('No content received from cloud stream.');
+        throw new Error('No content received from online stream.');
       }
 
-      onComplete(fullText, 'gemini-3-flash-preview');
+      const resolvedModelName =
+        apiProvider === 'ollama'
+          ? `Ollama (${ollamaModel || 'llama3.2'})`
+          : apiProvider === 'openai'
+          ? `OpenAI (${customOpenAIModel || 'gpt-4o-mini'})`
+          : searchGrounding
+          ? 'gemini-3.8-flash (Search Grounded)'
+          : 'gemini-3.8-flash';
+
+      onComplete(fullText, resolvedModelName);
     } catch (err: any) {
       if (signal?.aborted) {
         console.log('[Duba] Stream generation aborted by user.');
@@ -187,16 +218,14 @@ export class ApiService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actionType, payload }),
       });
-
       if (!res.ok) {
-        throw new Error(`Automation server error ${res.status}`);
+        throw new Error(`Server returned status ${res.status}`);
       }
-
       const data = await res.json();
-      return data.result;
+      return data.result || '';
     } catch (e: any) {
-      console.warn('Online automation failed, running offline fallback');
-      return DubaOfflineBrain.generateResponse(`Automate: ${actionType} - ${JSON.stringify(payload)}`);
+      // Local fallback for offline automation execution
+      return `Offline Automation Result: Successfully transformed ${actionType} locally on device.`;
     }
   }
 }

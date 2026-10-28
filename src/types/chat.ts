@@ -1,4 +1,5 @@
 export type ModelMode = 'auto' | 'cloud' | 'offline';
+export type ApiProvider = 'gemini' | 'ollama' | 'openai';
 
 export interface AutomationMeta {
   executionTimeMs?: number;
@@ -9,15 +10,21 @@ export interface AutomationMeta {
   tokensEstimated?: number;
 }
 
+export interface SearchSource {
+  title?: string;
+  url?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
-  modelUsed?: 'gemini-3-flash-preview' | 'gemini-3.8-flash' | 'duba-offline-core' | 'system' | string;
+  modelUsed?: string;
   isStreaming?: boolean;
   error?: string;
   automationMeta?: AutomationMeta;
+  searchSources?: SearchSource[];
 }
 
 export interface ChatSession {
@@ -43,6 +50,14 @@ export interface UserSettings {
   systemPrompt: string;
   language: 'en' | 'dz';
   autoInterpretOnline: boolean;
+  // Open-Source and Search Grounding configuration
+  apiProvider: ApiProvider;
+  searchGroundingEnabled: boolean;
+  ollamaEndpoint: string;
+  ollamaModel: string;
+  customOpenAIEndpoint: string;
+  customOpenAIKey: string;
+  customOpenAIModel: string;
 }
 
 export type NetworkConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'bluetooth' | 'unknown' | 'none';
@@ -62,5 +77,6 @@ export interface ServerHealth {
   online: boolean;
   hasApiKey: boolean;
   model: string;
+  searchGrounding: boolean;
   timestamp: number;
 }

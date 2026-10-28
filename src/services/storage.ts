@@ -19,6 +19,13 @@ Provide direct, beautifully formatted responses with clean Markdown, clear typog
 Respond directly and conversationally without unnecessary preambles or rigid templates.`,
   language: 'en',
   autoInterpretOnline: true,
+  apiProvider: 'gemini',
+  searchGroundingEnabled: true,
+  ollamaEndpoint: 'http://localhost:11434',
+  ollamaModel: 'llama3.2',
+  customOpenAIEndpoint: 'https://api.openai.com/v1',
+  customOpenAIKey: '',
+  customOpenAIModel: 'gpt-4o-mini',
 };
 
 export const INITIAL_WELCOME_SESSION: ChatSession = {

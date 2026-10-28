@@ -687,10 +687,10 @@ What would you like to build or automate today?`;
 I am **Duba**, an intelligent full-stack AI automation chatbot created to provide ChatGPT-like capabilities everywhere—even when you are completely offline, in flight, or without internet connectivity.
 
 #### Dual-Core Architecture:
-1. **Duba Cloud Turbo**: Connected to the Google Gemini 3.8 Flash model for ultra-fast, frontier-tier cloud reasoning, search grounding, and deep code synthesis.
+1. **Duba Online Engine**: Connected to high-speed AI with Google Search Grounding and open-source API support (Ollama / OpenAI).
 2. **Duba Offline Neural Core**: A 100% on-device heuristic knowledge engine, code architect, and automation runner that processes requests in your browser sandbox without sending any data over the network.
 
-You can freely toggle between Cloud, Offline, and Auto-Pilot modes at the top navigation bar anytime!`;
+You can freely toggle between Online, Offline, and Auto-Pilot modes at the top navigation bar anytime!`;
     }
 
     // 3. Automation: Summarization command
@@ -818,7 +818,7 @@ Here are the key insights and actionable takeaways:
    - **Step 3**: Validate outputs continuously to ensure reliability.
 
 3. **Pro-Tip**:
-   When working offline, Duba retains your conversation history, notes, and code snippets in persistent local storage. If you need online capabilities (such as web search or Gemini 3.8 Flash cloud synthesis), simply connect to the internet or switch to **Cloud Turbo** mode above!
+   When working offline, Duba retains your conversation history, notes, and code snippets in persistent local storage. If you need online capabilities (such as web search or online AI synthesis), simply connect to the internet or switch to **Online Mode** above!
 
 Would you like me to generate a specific code script, structured table, or automation plan for this?`;
   }

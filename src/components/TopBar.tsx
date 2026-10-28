@@ -16,6 +16,7 @@ import {
   Code2,
   RefreshCw,
   Zap,
+  Globe,
 } from 'lucide-react';
 import { ModelMode, NetworkConnectionType } from '../types/chat';
 import { translations } from '../services/translations';

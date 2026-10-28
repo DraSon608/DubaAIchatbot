@@ -164,9 +164,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : 'border-slate-800 bg-slate-950/50 text-slate-400 hover:border-slate-700'
                 }`}
               >
-                <span className="font-bold text-white text-xs">⚡ Cloud Turbo</span>
+                <span className="font-bold text-white text-xs">⚡ Online Mode</span>
                 <span className="text-[11px] text-slate-400 mt-1">
-                  Google Gemini 3.8 Flash model. Requires active internet.
+                  Online intelligence with search grounding and multi-model fallbacks.
                 </span>
               </button>
 
@@ -185,6 +185,146 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
 
+            {/* Online API Engine & Open-Source Provider */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-white flex items-center gap-1.5 text-xs">
+                    <Globe className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>API Provider & Engine</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Select your online intelligence provider or connect to local open-source models.
+                  </p>
+                </div>
+              </div>
+
+              {/* Provider Selector Tabs */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSaveSettings({ ...settings, apiProvider: 'gemini' })}
+                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
+                    settings.apiProvider === 'gemini' || !settings.apiProvider
+                      ? 'border-cyan-500 bg-cyan-950/50 text-cyan-200'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🌐 Built-In Gemini
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSaveSettings({ ...settings, apiProvider: 'ollama' })}
+                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
+                    settings.apiProvider === 'ollama'
+                      ? 'border-cyan-500 bg-cyan-950/50 text-cyan-200'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🦙 Ollama (Local)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSaveSettings({ ...settings, apiProvider: 'openai' })}
+                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
+                    settings.apiProvider === 'openai'
+                      ? 'border-cyan-500 bg-cyan-950/50 text-cyan-200'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  ⚡ OpenAI / vLLM
+                </button>
+              </div>
+
+              {/* Provider Config Fields */}
+              {settings.apiProvider === 'ollama' && (
+                <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                  <div className="text-[11px] text-slate-400">
+                    Connects directly to your local or self-hosted Ollama open-source server.
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-400">Endpoint URL</label>
+                      <input
+                        type="text"
+                        value={settings.ollamaEndpoint || 'http://localhost:11434'}
+                        onChange={(e) => onSaveSettings({ ...settings, ollamaEndpoint: e.target.value })}
+                        placeholder="http://localhost:11434"
+                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-400">Model Tag</label>
+                      <input
+                        type="text"
+                        value={settings.ollamaModel || 'llama3.2'}
+                        onChange={(e) => onSaveSettings({ ...settings, ollamaModel: e.target.value })}
+                        placeholder="llama3.2 or mistral"
+                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {settings.apiProvider === 'openai' && (
+                <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                  <div className="text-[11px] text-slate-400">
+                    Compatible with OpenAI, OpenRouter, LM Studio, vLLM, and Groq endpoints.
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-400">API Endpoint Base URL</label>
+                      <input
+                        type="text"
+                        value={settings.customOpenAIEndpoint || 'https://api.openai.com/v1'}
+                        onChange={(e) => onSaveSettings({ ...settings, customOpenAIEndpoint: e.target.value })}
+                        placeholder="https://api.openai.com/v1"
+                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-slate-400">Model Name</label>
+                      <input
+                        type="text"
+                        value={settings.customOpenAIModel || 'gpt-4o-mini'}
+                        onChange={(e) => onSaveSettings({ ...settings, customOpenAIModel: e.target.value })}
+                        placeholder="gpt-4o-mini or llama-3.3-70b"
+                        className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Google Search Grounding Feature Toggle */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                <div className="space-y-0.5">
+                  <div className="font-medium text-white flex items-center gap-1.5 text-xs">
+                    <span className="text-emerald-400">🌐</span>
+                    <span>Google Search Grounding</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Uses Google Search data to get live, up-to-date and accurate information.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.searchGroundingEnabled !== false}
+                    onChange={(e) =>
+                      onSaveSettings({
+                        ...settings,
+                        searchGroundingEnabled: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
+                </label>
+              </div>
+            </div>
+
             {/* Auto-Interpret Wi-Fi & Cellular */}
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/60 p-3.5">
               <div className="space-y-0.5">
@@ -197,7 +337,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <p className="text-[11px] text-slate-400">
                   {settings.language === 'dz'
                     ? 'ཝའི་ཕའི་དང་ འགྲུལ་འཕྲིན་དྲ་རྒྱ་ཡོད་ཚེ་ རང་བཞིན་གྱིས་རྒྱུན་འབྲེལ་ཡོད་པའི་ཐོག་ལུ་བསྒྱུར་བཅོས་འབདཝ་ཨིན།'
-                    : 'Automatically detect Wi-Fi or cellular data to enable Online Cloud Mode seamlessly.'}
+                    : 'Automatically detect Wi-Fi or cellular data to enable Online Mode seamlessly.'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -224,7 +364,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Force Simulated Offline Mode
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Disconnects from cloud APIs and routes all queries strictly to Duba Local Edge Engine.
+                  Disconnects from online APIs and routes all queries strictly to Duba Local Edge Engine.
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">

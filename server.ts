@@ -35,44 +35,186 @@ app.get('/api/health', (_req: Request, res: Response) => {
     status: 'ok',
     online: true,
     hasApiKey: Boolean(apiKey && apiKey !== 'MY_GEMINI_API_KEY'),
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.8-flash',
+    searchGrounding: true,
     timestamp: Date.now(),
   });
 });
 
-// Stream or regular chat endpoint
+// Stream or regular chat endpoint supporting Gemini (with Search Grounding), Ollama, and OpenAI
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, systemInstruction, stream = true, temperature = 0.7 } = req.body;
-
-    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-      res.status(503).json({
-        error: 'Gemini API key is not configured or invalid. Duba Offline Neural Core is available locally.',
-        offlineAvailable: true,
-      });
-      return;
-    }
+    const {
+      messages,
+      systemInstruction,
+      stream = true,
+      temperature = 0.7,
+      searchGrounding = true,
+      apiProvider = 'gemini',
+      ollamaEndpoint,
+      ollamaModel,
+      customOpenAIEndpoint,
+      customOpenAIKey,
+      customOpenAIModel,
+    } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.status(400).json({ error: 'Messages array is required.' });
       return;
     }
 
-    // Format messages for Gemini
-    // Filter and format contents into Gemini structure
-    const contents = messages.map((m: { role: string; content: string }) => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content || '' }],
-    }));
-
     // Natural, brilliant ChatGPT-like system instruction
     const defaultSystemInstruction =
       systemInstruction ||
-      `You are Duba, a brilliant, thoughtful, and articulate AI modeled after ChatGPT.
+      `You are Duba, a brilliant, thoughtful, and articulate AI assistant modeled after ChatGPT.
 You converse naturally, intelligently, and helpfully on any topic — coding, writing, reasoning, math, science, philosophy, creative brainstorming, and everyday questions.
 Provide direct, beautifully formatted responses with clean Markdown, clear typography, and well-commented code snippets when appropriate.
 Adapt seamlessly to the user's tone and requirements, answering questions directly and insightfully without unnecessary preamble or rigid automation templates.
 If the user writes in English, respond in fluent English. If the user writes or asks in Dzongkha (རྫོང་ཁ), respond naturally in polite, grammatical Dzongkha.`;
+
+    // 1. OPEN-SOURCE OLLAMA PROVIDER
+    if (apiProvider === 'ollama') {
+      try {
+        const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/+$/, '');
+        const ollamaRes = await fetch(`${endpoint}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: ollamaModel || 'llama3.2',
+            messages: [
+              ...(defaultSystemInstruction ? [{ role: 'system', content: defaultSystemInstruction }] : []),
+              ...messages,
+            ],
+            stream: true,
+            options: { temperature: typeof temperature === 'number' ? temperature : 0.7 },
+          }),
+        });
+
+        if (ollamaRes.ok && ollamaRes.body) {
+          res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache, no-transform');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.flushHeaders?.();
+
+          const reader = (ollamaRes.body as any).getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              try {
+                const parsed = JSON.parse(trimmed);
+                const chunkText = parsed.message?.content;
+                if (chunkText) {
+                  res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+                  if (typeof (res as any).flush === 'function') {
+                    (res as any).flush();
+                  }
+                }
+              } catch {}
+            }
+          }
+
+          res.write('data: [DONE]\n\n');
+          res.end();
+          return;
+        }
+      } catch (ollamaErr: any) {
+        console.warn('[Ollama API] Local endpoint unreachable. Falling back to built-in online engine...', ollamaErr?.message);
+      }
+    }
+
+    // 2. OPENAI-COMPATIBLE / OPEN-SOURCE API GATEWAY PROVIDER
+    if (apiProvider === 'openai') {
+      try {
+        const endpoint = (customOpenAIEndpoint || 'https://api.openai.com/v1').replace(/\/+$/, '');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (customOpenAIKey) {
+          headers['Authorization'] = `Bearer ${customOpenAIKey}`;
+        }
+
+        const openaiRes = await fetch(`${endpoint}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: customOpenAIModel || 'gpt-4o-mini',
+            messages: [
+              ...(defaultSystemInstruction ? [{ role: 'system', content: defaultSystemInstruction }] : []),
+              ...messages,
+            ],
+            stream: true,
+            temperature: typeof temperature === 'number' ? temperature : 0.7,
+          }),
+        });
+
+        if (openaiRes.ok && openaiRes.body) {
+          res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache, no-transform');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no');
+          res.flushHeaders?.();
+
+          const reader = (openaiRes.body as any).getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data: ')) continue;
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                const chunkText = parsed.choices?.[0]?.delta?.content;
+                if (chunkText) {
+                  res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+                  if (typeof (res as any).flush === 'function') {
+                    (res as any).flush();
+                  }
+                }
+              } catch {}
+            }
+          }
+
+          res.write('data: [DONE]\n\n');
+          res.end();
+          return;
+        }
+      } catch (openaiErr: any) {
+        console.warn('[OpenAI API] Gateway error. Falling back to built-in online engine...', openaiErr?.message);
+      }
+    }
+
+    // 3. BUILT-IN ONLINE ENGINE WITH GOOGLE SEARCH GROUNDING
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+      res.status(503).json({
+        error: 'API key is not configured or invalid. Duba Offline Neural Core is available locally.',
+        offlineAvailable: true,
+      });
+      return;
+    }
+
+    // Format messages for Gemini
+    const contents = messages.map((m: { role: string; content: string }) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content || '' }],
+    }));
 
     if (stream) {
       // Server-Sent Events (SSE) streaming with anti-buffering headers for Cloud Run / Nginx
@@ -82,30 +224,50 @@ If the user writes in English, respond in fluent English. If the user writes or 
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
 
-      // Ultra-fast sub-second models with multi-tier resilience
-      const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
       let responseStream = null;
-      let usedModel = 'gemini-3-flash-preview';
+      let usedModel = 'gemini-3.8-flash';
 
-      for (const modelName of candidateModels) {
+      // Feature: Google Search Grounding (gemini-3.8-flash with googleSearch tool)
+      if (searchGrounding) {
         try {
           responseStream = await ai.models.generateContentStream({
-            model: modelName,
+            model: 'gemini-3.8-flash',
             contents,
             config: {
               systemInstruction: defaultSystemInstruction,
               temperature: typeof temperature === 'number' ? temperature : 0.7,
+              tools: [{ googleSearch: {} }],
             },
           });
-          usedModel = modelName;
-          break;
-        } catch (modelErr: any) {
-          console.warn(`[Duba Cloud] Model ${modelName} unavailable (${modelErr?.status || modelErr?.message?.slice(0, 40)}). Trying fallback...`);
+          usedModel = 'gemini-3.8-flash (Search Grounded)';
+        } catch (searchErr: any) {
+          console.warn('[Duba Search] Grounding unavailable or limit reached. Switching to ultra-fast model...', searchErr?.status || searchErr?.message?.slice(0, 40));
+        }
+      }
+
+      // Fast model fallback
+      if (!responseStream) {
+        const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
+        for (const modelName of candidateModels) {
+          try {
+            responseStream = await ai.models.generateContentStream({
+              model: modelName,
+              contents,
+              config: {
+                systemInstruction: defaultSystemInstruction,
+                temperature: typeof temperature === 'number' ? temperature : 0.7,
+              },
+            });
+            usedModel = modelName;
+            break;
+          } catch (modelErr: any) {
+            console.warn(`[Duba Online] Model ${modelName} unavailable (${modelErr?.status || modelErr?.message?.slice(0, 40)}). Trying fallback...`);
+          }
         }
       }
 
       if (!responseStream) {
-        throw new Error('All cloud AI models are momentarily busy. Switching to offline engine.');
+        throw new Error('All online AI models are momentarily busy. Switching to offline engine.');
       }
 
       for await (const chunk of responseStream) {
@@ -121,37 +283,51 @@ If the user writes in English, respond in fluent English. If the user writes or 
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
-      const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
       let response = null;
 
-      for (const modelName of candidateModels) {
+      if (searchGrounding) {
         try {
           response = await ai.models.generateContent({
-            model: modelName,
+            model: 'gemini-3.8-flash',
             contents,
             config: {
               systemInstruction: defaultSystemInstruction,
               temperature: typeof temperature === 'number' ? temperature : 0.7,
+              tools: [{ googleSearch: {} }],
             },
           });
-          break;
-        } catch (modelErr: any) {
-          console.warn(`[Duba Cloud] Non-stream model ${modelName} failed. Trying fallback...`);
+        } catch {}
+      }
+
+      if (!response) {
+        const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
+        for (const modelName of candidateModels) {
+          try {
+            response = await ai.models.generateContent({
+              model: modelName,
+              contents,
+              config: {
+                systemInstruction: defaultSystemInstruction,
+                temperature: typeof temperature === 'number' ? temperature : 0.7,
+              },
+            });
+            break;
+          } catch {}
         }
       }
 
       if (!response) {
-        throw new Error('Cloud AI unavailable.');
+        throw new Error('Online AI unavailable.');
       }
 
       res.json({
         text: response.text || '',
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.8-flash',
       });
     }
   } catch (error: any) {
-    console.error('Gemini API Chat Error:', error);
-    const errorMessage = error?.message || 'Error communicating with Duba Cloud Engine.';
+    console.error('Online Chat Error:', error);
+    const errorMessage = error?.message || 'Error communicating with Duba Online Engine.';
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
       res.write('data: [DONE]\n\n');

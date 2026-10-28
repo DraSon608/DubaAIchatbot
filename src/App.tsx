@@ -439,6 +439,13 @@ export default function App() {
       messages: contextMessages,
       systemInstruction: effectiveSystemPrompt,
       forceOffline: forceOfflineTarget,
+      searchGrounding: settings.searchGroundingEnabled,
+      apiProvider: settings.apiProvider,
+      ollamaEndpoint: settings.ollamaEndpoint,
+      ollamaModel: settings.ollamaModel,
+      customOpenAIEndpoint: settings.customOpenAIEndpoint,
+      customOpenAIKey: settings.customOpenAIKey,
+      customOpenAIModel: settings.customOpenAIModel,
       signal: controller.signal,
       onChunk: (chunk: string) => {
         accumulatedContent += chunk;
