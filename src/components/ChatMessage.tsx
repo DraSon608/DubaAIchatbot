@@ -167,7 +167,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               {isCloudModel ? (
                 <>
                   <Cloud className="h-2.5 w-2.5 text-cyan-400" />
-                  Cloud 3.8
+                  Online
                 </>
               ) : (
                 <>

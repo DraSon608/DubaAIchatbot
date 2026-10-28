@@ -5,7 +5,7 @@ const ACTIVE_SESSION_ID_KEY = 'duba_active_session_id';
 const SETTINGS_KEY = 'duba_settings_v1';
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  modelMode: 'auto',
+  modelMode: 'cloud',
   forceOffline: false,
   speechEnabled: false,
   speechRate: 1,
@@ -26,7 +26,7 @@ export const INITIAL_WELCOME_SESSION: ChatSession = {
   title: 'Welcome to Duba Chatbot',
   createdAt: Date.now() - 3600000,
   updatedAt: Date.now() - 3600000,
-  modelMode: 'auto',
+  modelMode: 'cloud',
   isPinned: true,
   messages: [
     {

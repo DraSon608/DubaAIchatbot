@@ -7,7 +7,7 @@ export interface ChatRequestOptions {
   forceOffline?: boolean;
   temperature?: number;
   onChunk: (chunk: string) => void;
-  onComplete: (fullText: string, modelUsed: 'gemini-3.8-flash' | 'duba-offline-core') => void;
+  onComplete: (fullText: string, modelUsed: string) => void;
   onError: (error: string) => void;
   signal?: AbortSignal;
 }
@@ -156,7 +156,7 @@ export class ApiService {
         throw new Error('No content received from cloud stream.');
       }
 
-      onComplete(fullText, 'gemini-3.8-flash');
+      onComplete(fullText, 'gemini-3-flash-preview');
     } catch (err: any) {
       if (signal?.aborted) {
         console.log('[Duba] Stream generation aborted by user.');

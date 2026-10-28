@@ -470,7 +470,7 @@ export default function App() {
           );
         }
       },
-      onComplete: (fullText: string, modelUsed: 'gemini-3.8-flash' | 'duba-offline-core') => {
+      onComplete: (fullText: string, modelUsed: string) => {
         setIsStreaming(false);
         abortControllerRef.current = null;
 

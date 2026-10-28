@@ -35,7 +35,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     status: 'ok',
     online: true,
     hasApiKey: Boolean(apiKey && apiKey !== 'MY_GEMINI_API_KEY'),
-    model: 'gemini-3.8-flash',
+    model: 'gemini-3-flash-preview',
     timestamp: Date.now(),
   });
 });
@@ -82,10 +82,10 @@ If the user writes in English, respond in fluent English. If the user writes or 
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders?.();
 
-      // Multi-model resilience: Try primary fast flash model, then fallback
-      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+      // Ultra-fast sub-second models with multi-tier resilience
+      const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
       let responseStream = null;
-      let usedModel = 'gemini-flash-latest';
+      let usedModel = 'gemini-3-flash-preview';
 
       for (const modelName of candidateModels) {
         try {
@@ -121,7 +121,7 @@ If the user writes in English, respond in fluent English. If the user writes or 
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
-      const candidateModels = ['gemini-flash-latest', 'gemini-3.8-flash'];
+      const candidateModels = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-flash-latest'];
       let response = null;
 
       for (const modelName of candidateModels) {
@@ -146,7 +146,7 @@ If the user writes in English, respond in fluent English. If the user writes or 
 
       res.json({
         text: response.text || '',
-        model: 'gemini-flash-latest',
+        model: 'gemini-3-flash-preview',
       });
     }
   } catch (error: any) {

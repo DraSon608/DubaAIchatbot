@@ -137,16 +137,19 @@ export const TopBar: React.FC<TopBarProps> = ({
               setShowModelMenu((prev) => !prev);
               setShowNetworkMenu(false);
             }}
-            className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-slate-200 hover:bg-white/10 transition"
+            className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-slate-200 hover:bg-white/10 transition"
           >
-            <span className="flex items-center gap-1.5">
-              <span>Duba</span>
-              <span className="text-slate-400 font-normal">
-                {modelMode === 'cloud'
-                  ? '3.8 Flash'
-                  : modelMode === 'offline'
-                  ? 'Offline Core'
-                  : 'Auto-Pilot'}
+            <span className="flex items-center gap-2">
+              <span className="font-bold text-white">Duba AI</span>
+              <span className="flex items-center gap-1 text-xs font-normal text-slate-300">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    modelMode === 'offline' || forceOffline || !isOnline
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400 animate-pulse'
+                  }`}
+                />
+                <span>{modelMode === 'offline' || forceOffline || !isOnline ? 'Offline' : 'Online'}</span>
               </span>
             </span>
             <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
@@ -156,55 +159,34 @@ export const TopBar: React.FC<TopBarProps> = ({
           {showModelMenu && (
             <div className="absolute top-11 left-0 z-50 w-72 rounded-2xl border border-white/10 bg-[#212121] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Model Engine
+                Intelligence Engine
               </div>
 
-              {/* Cloud Turbo (Gemini 3.8) */}
+              {/* Online Mode */}
               <button
                 onClick={() => {
                   onChangeModelMode('cloud');
+                  if (forceOffline) onToggleForceOffline();
                   setShowModelMenu(false);
                 }}
                 className={`flex w-full items-start justify-between rounded-xl p-2.5 text-left transition ${
-                  modelMode === 'cloud'
+                  modelMode !== 'offline' && !forceOffline
                     ? 'bg-white/10 text-white'
                     : 'text-slate-300 hover:bg-white/5'
                 }`}
               >
                 <div>
                   <div className="flex items-center gap-1.5 font-semibold text-xs">
-                    <Cloud className="h-3.5 w-3.5 text-amber-400" />
-                    <span>Duba Cloud Turbo</span>
+                    <Cloud className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Duba Online Mode</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Gemini 3.8 Flash model with ultra-fast cloud reasoning.
+                    Fast cloud reasoning with sub-second streaming answers like ChatGPT.
                   </p>
                 </div>
-                {modelMode === 'cloud' && <Check className="h-4 w-4 text-amber-400 shrink-0" />}
-              </button>
-
-              {/* Auto-Pilot */}
-              <button
-                onClick={() => {
-                  onChangeModelMode('auto');
-                  setShowModelMenu(false);
-                }}
-                className={`flex w-full items-start justify-between rounded-xl p-2.5 text-left transition ${
-                  modelMode === 'auto'
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-300 hover:bg-white/5'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-1.5 font-semibold text-xs">
-                    <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                    <span>Duba Auto-Pilot</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Auto-connects to Online Cloud when available; falls back locally.
-                  </p>
-                </div>
-                {modelMode === 'auto' && <Check className="h-4 w-4 text-cyan-400 shrink-0" />}
+                {modelMode !== 'offline' && !forceOffline && (
+                  <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                )}
               </button>
 
               {/* Offline Core */}
@@ -214,21 +196,23 @@ export const TopBar: React.FC<TopBarProps> = ({
                   setShowModelMenu(false);
                 }}
                 className={`flex w-full items-start justify-between rounded-xl p-2.5 text-left transition ${
-                  modelMode === 'offline'
+                  modelMode === 'offline' || forceOffline
                     ? 'bg-white/10 text-white'
                     : 'text-slate-300 hover:bg-white/5'
                 }`}
               >
                 <div>
                   <div className="flex items-center gap-1.5 font-semibold text-xs">
-                    <Cpu className="h-3.5 w-3.5 text-indigo-400" />
+                    <Cpu className="h-3.5 w-3.5 text-amber-400" />
                     <span>Duba Offline Core</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     100% on-device neural edge execution without internet.
                   </p>
                 </div>
-                {modelMode === 'offline' && <Check className="h-4 w-4 text-indigo-400 shrink-0" />}
+                {(modelMode === 'offline' || forceOffline) && (
+                  <Check className="h-4 w-4 text-amber-400 shrink-0" />
+                )}
               </button>
             </div>
           )}

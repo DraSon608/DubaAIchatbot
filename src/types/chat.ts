@@ -14,7 +14,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
-  modelUsed?: 'gemini-3.8-flash' | 'duba-offline-core' | 'system';
+  modelUsed?: 'gemini-3-flash-preview' | 'gemini-3.8-flash' | 'duba-offline-core' | 'system' | string;
   isStreaming?: boolean;
   error?: string;
   automationMeta?: AutomationMeta;
